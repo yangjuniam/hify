@@ -1,0 +1,417 @@
+/* ==========================================
+   Hify Styles Entry Point
+   ========================================== */
+
+/* 导入设计变量 */
+@import './variables.css';
+
+/* 导入 Element Plus 主题 */
+@import './element-plus-theme.css';
+
+/* ==========================================
+   Base Styles
+   ========================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+}
+
+#app {
+  overflow: hidden;
+}
+
+/* ==========================================
+   Layout
+   ========================================== */
+
+.hify-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-bg-soft);
+}
+
+/* 主内容区 */
+.hify-main-content {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--color-bg-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.hify-main-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.hify-main-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hify-main-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.hify-main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* ==========================================
+   Header / Top Bar
+   ========================================== */
+
+.hify-header {
+  height: var(--header-height);
+  background-color: var(--color-bg-base);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-5);
+  flex-shrink: 0;
+  z-index: var(--z-index-sticky);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+/* 面包屑导航 */
+.hify-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb-item {
+  transition: color var(--transition-fast) var(--ease-out);
+}
+
+.breadcrumb-item:last-child {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.breadcrumb-separator {
+  color: var(--color-text-tertiary);
+}
+
+/* 用户信息 */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color var(--transition-fast) var(--ease-out);
+}
+
+.user-info:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.user-name {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+/* ==========================================
+   Page Layout
+   ========================================== */
+
+.hify-page {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--page-padding);
+  background-color: var(--color-bg-subtle);
+}
+
+.hify-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.hify-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hify-page::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.hify-page::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* ==========================================
+   Page Header
+   ========================================== */
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-6);
+  gap: var(--spacing-6);
+}
+
+.page-header-left {
+  flex: 1;
+}
+
+.page-title {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+  margin-bottom: var(--spacing-2);
+}
+
+.page-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+  max-width: 600px;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   Card
+   ========================================== */
+
+.hify-card {
+  background-color: var(--color-bg-base);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--card-padding);
+  border: 1px solid var(--color-border);
+  transition: box-shadow var(--transition-base) var(--ease-out);
+}
+
+.hify-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.card-body {
+  flex: 1;
+}
+
+/* ==========================================
+   Buttons
+   ========================================== */
+
+/* 主色渐变按钮 */
+.btn-primary {
+  background: var(--gradient-primary);
+  border: none;
+  color: white;
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast) var(--ease-out);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+/* 次要操作 - 白色边框按钮 */
+.btn-secondary {
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast) var(--ease-out);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-bg-subtle);
+  border-color: var(--color-border-strong);
+}
+
+.btn-secondary:active {
+  background-color: var(--color-bg-border);
+}
+
+/* 危险操作 - 红色按钮 */
+.btn-danger {
+  background-color: var(--color-danger-500);
+  border: none;
+  color: white;
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast) var(--ease-out);
+}
+
+.btn-danger:hover {
+  background-color: var(--color-danger-600);
+}
+
+.btn-danger:active {
+  background-color: var(--color-danger-700);
+}
+
+/* 危险操作 - 白色边框按钮 */
+.btn-danger-outline {
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-danger-300);
+  color: var(--color-danger-500);
+  font-weight: var(--font-weight-medium);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast) var(--ease-out);
+}
+
+.btn-danger-outline:hover {
+  background-color: var(--color-danger-50);
+  border-color: var(--color-danger-400);
+}
+
+/* 小尺寸按钮 */
+.btn-sm {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-sm);
+}
+
+/* 大尺寸按钮 */
+.btn-lg {
+  padding: var(--spacing-4) var(--spacing-6);
+  font-size: var(--font-size-base);
+}
+
+/* 禁用状态 */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled,
+.btn-danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================
+   Element Plus 组件自定义
+   ========================================== */
+
+/* Element Plus 按钮覆盖 */
+.el-button--primary {
+  background: var(--gradient-primary);
+  border: none;
+  font-weight: var(--font-weight-medium);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.el-button--primary:hover {
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Element Plus 面包屑覆盖 */
+.el-breadcrumb__item {
+  font-size: var(--font-size-sm);
+}
+
+.el-breadcrumb__inner {
+  color: var(--color-text-secondary);
+  transition: color var(--transition-fast) var(--ease-out);
+}
+
+.el-breadcrumb__inner:hover {
+  color: var(--color-primary-500);
+}
+
+.el-breadcrumb__inner.is-link {
+  color: var(--color-text-secondary);
+}
+
+.el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.el-breadcrumb__separator {
+  color: var(--color-text-tertiary);
+}

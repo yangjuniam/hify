@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="hify"/>
+
+    <property name="LOG_PATH" value="logs"/>
+    <property name="LOG_PATTERN" value="%d{HH:mm:ss} [%thread] [%X{traceId}] %-5level %logger{20} - %msg%n"/>
+    <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{20} - %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.json</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+            <maxFileSize>100MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <springProfile name="dev">
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <logger name="com.hify" level="DEBUG"/>
+        <logger name="org.springframework" level="INFO"/>
+        <logger name="com.baomidou.mybatisplus" level="DEBUG"/>
+    </springProfile>
+
+    <springProfile name="!dev">
+        <root level="INFO">
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="JSON_FILE"/>
+        </root>
+        <logger name="com.hify" level="INFO"/>
+        <logger name="org.springframework" level="WARN"/>
+        <logger name="com.baomidou.mybatisplus" level="WARN"/>
+    </springProfile>
+</configuration>
