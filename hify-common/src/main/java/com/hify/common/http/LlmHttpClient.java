@@ -51,6 +51,13 @@ public class LlmHttpClient {
         return new RestTemplate(factory);
     }
 
+    private RestTemplate createRestTemplate(int readTimeoutMs) {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(readTimeoutMs);
+        return new RestTemplate(factory);
+    }
+
     private OkHttpClient createOkHttpClient() {
         return new OkHttpClient.Builder()
             .connectTimeout(5, TimeUnit.SECONDS)
@@ -112,6 +119,65 @@ public class LlmHttpClient {
         } catch (Exception e) {
             stopWatch.stop();
             log.error("LLM POST request error: url={}, duration={}ms, error={}",
+                url, stopWatch.getTotalTimeMillis(), e.getMessage(), e);
+            throw new LlmApiException(LlmApiException.ErrorType.NETWORK_ERROR, "网络错误", e);
+        }
+    }
+
+    /**
+     * 普通GET请求（用于连通性测试）
+     *
+     * @param url 请求URL
+     * @param headers 请求头
+     * @param timeoutMs 超时时间（毫秒）
+     * @return 响应体
+     * @throws LlmApiException 调用失败时抛出
+     */
+    public String get(String url, Map<String, String> headers, int timeoutMs) {
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start();
+
+        RestTemplate customRestTemplate = createRestTemplate(timeoutMs);
+
+        try {
+            HttpHeaders httpHeaders = new HttpHeaders();
+            if (headers != null) {
+                headers.forEach(httpHeaders::add);
+            }
+
+            HttpEntity<String> entity = new HttpEntity<>(httpHeaders);
+            ResponseEntity<String> response = customRestTemplate.exchange(
+                url, HttpMethod.GET, entity, String.class
+            );
+
+            stopWatch.stop();
+            log.info("LLM GET request: url={}, status={}, duration={}ms",
+                url, response.getStatusCode().value(), stopWatch.getTotalTimeMillis());
+
+            if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                throw new LlmApiException(LlmApiException.ErrorType.AUTH_FAILED,
+                    "API认证失败: " + response.getBody());
+            }
+            if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                throw new LlmApiException(LlmApiException.ErrorType.RATE_LIMITED,
+                    "API限流: " + response.getBody());
+            }
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new LlmApiException(LlmApiException.ErrorType.API_ERROR,
+                    "API调用失败: " + response.getStatusCode() + ", " + response.getBody());
+            }
+
+            return response.getBody();
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            stopWatch.stop();
+            log.warn("LLM GET request timeout: url={}, duration={}ms, error={}",
+                url, stopWatch.getTotalTimeMillis(), e.getMessage());
+            throw new LlmApiException(LlmApiException.ErrorType.TIMEOUT, "请求超时", e);
+        } catch (LlmApiException e) {
+            throw e;
+        } catch (Exception e) {
+            stopWatch.stop();
+            log.error("LLM GET request error: url={}, duration={}ms, error={}",
                 url, stopWatch.getTotalTimeMillis(), e.getMessage(), e);
             throw new LlmApiException(LlmApiException.ErrorType.NETWORK_ERROR, "网络错误", e);
         }
