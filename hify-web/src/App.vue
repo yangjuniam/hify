@@ -75,7 +75,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
-import { Setting, User, ChatDotRound, ArrowRight, ArrowLeft } from '@element-plus/icons-vue'
+import { Setting, User, ChatDotRound, ArrowRight } from '@element-plus/icons-vue'
 
 // 引入样式
 import './styles/index.css'

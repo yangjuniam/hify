@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import type { TableColumn, ApiMethod, PageParams, PageResult } from '@/types'
 
 /**

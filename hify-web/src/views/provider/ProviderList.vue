@@ -242,10 +242,20 @@ const rowStyle = () => {
 }
 
 /**
- * 组件引用
+ * 组件引用接口
  */
-const tableRef = ref<InstanceType<typeof HifyTable>>()
-const dialogRef = ref<InstanceType<typeof HifyFormDialog<Provider>>>()
+interface TableRef {
+  refresh: () => void
+}
+
+interface DialogRef {
+  open: (data?: Provider | null) => void
+  close: () => void
+  reset: () => void
+}
+
+const tableRef = ref<TableRef>()
+const dialogRef = ref<DialogRef>()
 
 /**
  * 弹窗状态

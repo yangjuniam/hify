@@ -7,3 +7,6 @@ mvnw.cmd
 .idea/
 .vscode/
 *.log
+
+.pid/
+*/logs/
