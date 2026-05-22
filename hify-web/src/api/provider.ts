@@ -1,27 +1,21 @@
 import { get, post, put, del } from '@/utils/request'
 import type { PageResult } from '@/types'
 
-/**
- * 提供商类型
- */
 export interface Provider {
   id: number
   name: string
   type: string
   baseUrl: string
-  authConfig?: Record<string, any>
+  authConfig?: Record<string, unknown>
   description?: string
   enabled: number
   createdAt: string
   updatedAt?: string
 }
 
-/**
- * 提供商详情（包含模型配置和健康状态）
- */
 export interface ProviderDetail extends Provider {
-  modelConfigs: ModelConfig[]
-  health: ProviderHealth
+  modelConfigs?: ModelConfig[]
+  health?: ProviderHealth
 }
 
 export interface ModelConfig {
@@ -44,71 +38,75 @@ export interface ProviderHealth {
   errorMessage?: string
 }
 
-/**
- * 创建提供商请求
- */
+export interface ProviderListParams {
+  page: number
+  pageSize: number
+  type?: string
+  enabled?: number
+}
+
 export interface CreateProviderRequest {
   name: string
   type: string
   baseUrl: string
-  authConfig?: Record<string, any>
+  authConfig?: Record<string, unknown>
   description?: string
   enabled?: number
 }
 
-/**
- * 更新提供商请求
- */
-export interface UpdateProviderRequest extends CreateProviderRequest {
+export interface UpdateProviderRequest {
   id: number
+  name: string
+  type: string
+  baseUrl: string
+  authConfig?: Record<string, unknown>
+  description?: string
+  enabled?: number
 }
 
-/**
- * 获取分页列表
- */
-export const getProviderList = (params: {
-  page: number
-  pageSize: number
-}): Promise<PageResult<Provider>> => {
-  return get<PageResult<Provider>>('/v1/providers', params)
-}
-
-/**
- * 获取详情
- */
-export const getProviderDetail = (id: number): Promise<ProviderDetail> => {
-  return get<ProviderDetail>(`/v1/providers/${id}`)
-}
-
-/**
- * 创建
- */
-export const createProvider = (data: CreateProviderRequest): Promise<Provider> => {
-  return post<Provider>('/v1/providers', data)
-}
-
-/**
- * 更新
- */
-export const updateProvider = (data: UpdateProviderRequest): Promise<Provider> => {
-  return put<Provider>('/v1/providers', data)
-}
-
-/**
- * 删除
- */
-export const deleteProvider = (id: number): Promise<void> => {
-  return del<void>(`/v1/providers/${id}`)
-}
-
-/**
- * 测试连接
- */
-export const testProviderConnection = (id: number): Promise<{
+export interface ConnectionTestResult {
   success: boolean
   latencyMs?: number
   modelCount?: number
   errorMessage?: string
-}> => {
-  return post(`/v1/providers/${id}/test-connection`)
 }
+
+export const getProviderList = async (params: ProviderListParams): Promise<PageResult<ProviderDetail>> => {
+  const result = await get<PageResult<Provider>>('/v1/providers', params)
+  const list = await Promise.all(
+    result.list.map(async (provider) => {
+      try {
+        return await getProviderDetail(provider.id)
+      } catch (error) {
+        return provider
+      }
+    })
+  )
+  return {
+    ...result,
+    list,
+  }
+}
+
+export const getProviderDetail = (id: number): Promise<ProviderDetail> => {
+  return get<ProviderDetail>(`/v1/providers/${id}`)
+}
+
+export const createProvider = (data: CreateProviderRequest): Promise<Provider> => {
+  return post<Provider>('/v1/providers', data)
+}
+
+export const updateProvider = (data: UpdateProviderRequest): Promise<Provider> => {
+  const { id, ...body } = data
+  return put<Provider>(`/v1/providers/${id}`, body)
+}
+
+export const deleteProvider = (id: number): Promise<void> => {
+  return del<void>(`/v1/providers/${id}`)
+}
+
+export const testConnection = (id: number): Promise<ConnectionTestResult> => {
+  return post<ConnectionTestResult>(`/v1/providers/${id}/test-connection`)
+}
+
+export const testProviderConnection = testConnection

@@ -19,7 +19,7 @@
       <HifyTable
         ref="tableRef"
         :columns="columns"
-        :api="fetchProviderList"
+        :api="getProviderList"
         :row-style="rowStyle"
       >
         <!-- 类型列自定义渲染 -->
@@ -27,16 +27,28 @@
           <el-tag :type="typeTagType(row.type)">{{ typeMap[row.type] }}</el-tag>
         </template>
 
-        <!-- 状态列自定义渲染 -->
-        <template #status="{ row }">
-          <el-tag :type="row.status === 'enabled' ? 'success' : 'info'">
-            {{ row.status === 'enabled' ? '启用' : '禁用' }}
+        <template #enabled="{ row }">
+          <el-tag :type="row.enabled === 1 ? 'success' : 'info'">
+            {{ row.enabled === 1 ? '启用' : '禁用' }}
           </el-tag>
         </template>
 
-        <!-- 操作列 -->
+        <template #health="{ row }">
+          <el-tag :type="healthTagType(row.health?.status)">
+            {{ row.health?.status || 'UNKNOWN' }}
+          </el-tag>
+          <span v-if="row.health?.latencyMs != null" class="health-latency">
+            {{ row.health.latencyMs }}ms
+          </span>
+        </template>
+
+        <template #modelCount="{ row }">
+          {{ enabledModelCount(row) }}
+        </template>
+
         <template #actions="{ row }">
           <span class="action-buttons">
+            <el-button text class="btn-test" @click="handleTestConnection(row)">连通性测试</el-button>
             <el-button text class="btn-edit" @click="handleEdit(row)">编辑</el-button>
             <el-button text class="btn-delete" @click="handleDelete(row)">删除</el-button>
           </span>
@@ -71,10 +83,11 @@
             placeholder="请选择类型"
             style="width: 100%"
           >
-            <el-option label="OpenAI" value="openai" />
-            <el-option label="Claude" value="claude" />
-            <el-option label="Gemini" value="gemini" />
-            <el-option label="Ollama" value="ollama" />
+            <el-option label="OpenAI" value="OPENAI" />
+            <el-option label="Claude" value="ANTHROPIC" />
+            <el-option label="Ollama" value="OLLAMA" />
+            <el-option label="Azure OpenAI" value="AZURE_OPENAI" />
+            <el-option label="OpenAI Compatible" value="OPENAI_COMPATIBLE" />
           </el-select>
         </el-form-item>
 
@@ -95,6 +108,23 @@
             clearable
           />
         </el-form-item>
+
+        <el-form-item label="状态" prop="enabled">
+          <div class="status-toggle">
+            <el-button
+              :type="normalizeEnabled(formData.enabled) === 1 ? 'success' : 'default'"
+              @click="formData.enabled = 1"
+            >
+              启用
+            </el-button>
+            <el-button
+              :type="normalizeEnabled(formData.enabled) === 0 ? 'danger' : 'default'"
+              @click="formData.enabled = 0"
+            >
+              禁用
+            </el-button>
+          </div>
+        </el-form-item>
       </template>
     </HifyFormDialog>
   </div>
@@ -102,78 +132,30 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import HifyTable from '@/components/HifyTable.vue'
 import HifyFormDialog from '@/components/HifyFormDialog.vue'
 import { useConfirm } from '@/composables/useConfirm'
 import { notifySuccess, notifyError } from '@/utils/notify'
 import { Plus } from '@element-plus/icons-vue'
-import type { TableColumn, PageParams, PageResult } from '@/types'
+import {
+  getProviderList,
+  createProvider,
+  updateProvider,
+  deleteProvider,
+  testConnection,
+} from '@/api/provider'
+import type {
+  CreateProviderRequest,
+  Provider,
+  ProviderDetail,
+  UpdateProviderRequest,
+} from '@/api/provider'
+import type { TableColumn } from '@/types'
 
-/**
- * Provider 数据类型
- */
-interface Provider {
-  id: number
-  name: string
-  type: 'openai' | 'claude' | 'gemini' | 'ollama'
-  apiKey: string
-  baseUrl: string
-  status: 'enabled' | 'disabled'
-  createdAt: string
+type ProviderFormData = Partial<Provider> & {
+  apiKey?: string
 }
-
-/**
- * Mock 数据
- */
-const mockProviders: Provider[] = [
-  {
-    id: 1,
-    name: 'GPT-4',
-    type: 'openai',
-    apiKey: 'sk-xxxxx',
-    baseUrl: 'https://api.openai.com/v1',
-    status: 'enabled',
-    createdAt: '2024-05-01 10:30:00',
-  },
-  {
-    id: 2,
-    name: 'Claude-3.5',
-    type: 'claude',
-    apiKey: 'sk-ant-xxxxx',
-    baseUrl: 'https://api.anthropic.com',
-    status: 'enabled',
-    createdAt: '2024-04-28 14:20:00',
-  },
-  {
-    id: 3,
-    name: 'Gemini-Pro',
-    type: 'gemini',
-    apiKey: 'AIzaSy-xxxxx',
-    baseUrl: 'https://generativelanguage.googleapis.com',
-    status: 'disabled',
-    createdAt: '2024-04-25 09:15:00',
-  },
-  {
-    id: 4,
-    name: 'Ollama-Local',
-    type: 'ollama',
-    apiKey: '',
-    baseUrl: 'http://localhost:11434',
-    status: 'enabled',
-    createdAt: '2024-04-20 16:45:00',
-  },
-  {
-    id: 5,
-    name: 'GPT-3.5-Turbo',
-    type: 'openai',
-    apiKey: 'sk-xxxxx',
-    baseUrl: 'https://api.openai.com/v1',
-    status: 'disabled',
-    createdAt: '2024-04-15 11:00:00',
-  },
-]
-
-let providers = [...mockProviders]
 
 /**
  * 屏幕宽度
@@ -183,23 +165,27 @@ const screenWidth = ref(window.innerWidth)
 /**
  * 完整列配置（宽屏）
  */
-const allColumns: TableColumn<Provider>[] = [
+const allColumns: TableColumn<ProviderDetail>[] = [
   { label: '名称', prop: 'name', minWidth: 150 },
-  { label: '类型', prop: 'type', width: 120, slot: 'type' },
+  { label: '类型', prop: 'type', width: 160, slot: 'type' },
   { label: 'Base URL', prop: 'baseUrl', minWidth: 200 },
-  { label: '状态', prop: 'status', width: 100, slot: 'status' },
+  { label: '状态', prop: 'enabled', width: 100, slot: 'enabled' },
+  { label: '健康状态', prop: 'health', width: 180, slot: 'health' },
+  { label: '模型数', prop: 'modelCount', width: 100, slot: 'modelCount' },
   { label: '创建时间', prop: 'createdAt', width: 180 },
-  { label: '操作', prop: 'actions', width: 180, slot: 'actions' },
+  { label: '操作', prop: 'actions', width: 260, slot: 'actions' },
 ]
 
 /**
  * 窄屏列配置（小于 1200px）
  */
-const narrowColumns: TableColumn<Provider>[] = [
+const narrowColumns: TableColumn<ProviderDetail>[] = [
   { label: '名称', prop: 'name', minWidth: 150 },
-  { label: '类型', prop: 'type', width: 120, slot: 'type' },
-  { label: '状态', prop: 'status', width: 100, slot: 'status' },
-  { label: '操作', prop: 'actions', width: 150, slot: 'actions' },
+  { label: '类型', prop: 'type', width: 160, slot: 'type' },
+  { label: '状态', prop: 'enabled', width: 100, slot: 'enabled' },
+  { label: '健康状态', prop: 'health', width: 180, slot: 'health' },
+  { label: '模型数', prop: 'modelCount', width: 100, slot: 'modelCount' },
+  { label: '操作', prop: 'actions', width: 260, slot: 'actions' },
 ]
 
 /**
@@ -213,10 +199,11 @@ const columns = computed(() => {
  * 类型映射
  */
 const typeMap: Record<string, string> = {
-  openai: 'OpenAI',
-  claude: 'Claude',
-  gemini: 'Gemini',
-  ollama: 'Ollama',
+  OPENAI: 'OpenAI',
+  ANTHROPIC: 'Claude',
+  OLLAMA: 'Ollama',
+  AZURE_OPENAI: 'Azure OpenAI',
+  OPENAI_COMPATIBLE: 'OpenAI Compatible',
 }
 
 /**
@@ -224,12 +211,31 @@ const typeMap: Record<string, string> = {
  */
 const typeTagType = (type: string): string => {
   const map: Record<string, string> = {
-    openai: 'primary',
-    claude: 'warning',
-    gemini: 'success',
-    ollama: 'info',
+    OPENAI: 'primary',
+    ANTHROPIC: 'warning',
+    OLLAMA: 'info',
+    AZURE_OPENAI: 'success',
+    OPENAI_COMPATIBLE: 'success',
   }
   return map[type] || ''
+}
+
+const healthTagType = (status?: string): 'success' | 'danger' | 'warning' | 'info' => {
+  const map: Record<string, 'success' | 'danger' | 'warning' | 'info'> = {
+    UP: 'success',
+    DOWN: 'danger',
+    DEGRADED: 'warning',
+    UNKNOWN: 'info',
+  }
+  return map[status || 'UNKNOWN'] || 'info'
+}
+
+const enabledModelCount = (provider: ProviderDetail): number => {
+  return provider.modelConfigs?.filter((model) => model.enabled === 1).length || 0
+}
+
+const normalizeEnabled = (enabled: unknown): number => {
+  return enabled === 0 || enabled === '0' || enabled === false ? 0 : 1
 }
 
 /**
@@ -249,7 +255,7 @@ interface TableRef {
 }
 
 interface DialogRef {
-  open: (data?: Provider | null) => void
+  open: (data?: ProviderFormData | null) => void
   close: () => void
   reset: () => void
 }
@@ -261,7 +267,7 @@ const dialogRef = ref<DialogRef>()
  * 弹窗状态
  */
 const dialogVisible = ref(false)
-const editingData = ref<Provider | null>(null)
+const editingData = ref<ProviderFormData | null>(null)
 
 /**
  * 表单验证规则
@@ -298,101 +304,36 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-/**
- * Mock API：获取提供商列表
- */
-const fetchProviderList = async (params: PageParams): Promise<PageResult<Provider>> => {
-  // 模拟网络延迟
-  await new Promise((resolve) => setTimeout(resolve, 300))
-
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
-  const list = providers.slice(start, end)
+const buildProviderPayload = (data: ProviderFormData): CreateProviderRequest => {
+  const authConfig = data.apiKey
+    ? { ...(data.authConfig || {}), apiKey: data.apiKey }
+    : data.authConfig
 
   return {
-    list,
-    total: providers.length,
-    page: params.page,
-    pageSize: params.pageSize,
+    name: data.name || '',
+    type: data.type || '',
+    baseUrl: data.baseUrl || '',
+    authConfig,
+    description: data.description,
+    enabled: normalizeEnabled(data.enabled),
   }
 }
 
-/**
- * Mock API：创建提供商
- */
-const createProvider = async (data: Omit<Provider, 'id' | 'status' | 'createdAt'>): Promise<Provider> => {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-
-  const newProvider: Provider = {
-    ...data,
-    id: Math.max(...providers.map((p) => p.id)) + 1,
-    status: 'enabled',
-    createdAt: new Date().toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }),
-  }
-
-  providers.unshift(newProvider)
-  return newProvider
-}
-
-/**
- * Mock API：更新提供商
- */
-const updateProvider = async (id: number, data: Partial<Provider>): Promise<Provider> => {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-
-  const index = providers.findIndex((p) => p.id === id)
-  if (index !== -1) {
-    providers[index] = { ...providers[index], ...data }
-    return providers[index]
-  }
-  throw new Error('提供商不存在')
-}
-
-/**
- * Mock API：删除提供商
- */
-const deleteProvider = async (id: number): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-
-  const index = providers.findIndex((p) => p.id === id)
-  if (index !== -1) {
-    providers.splice(index, 1)
-  } else {
-    throw new Error('提供商不存在')
-  }
-}
-
-/**
- * 删除确认
- */
 const confirmDelete = useConfirm('确定要删除该提供商吗？', deleteProvider, '删除成功')
 
-/**
- * 打开新增弹窗
- */
 const handleCreate = () => {
   editingData.value = null
   dialogVisible.value = true
 }
 
-/**
- * 打开编辑弹窗
- */
 const handleEdit = (row: Provider) => {
-  editingData.value = row
+  editingData.value = {
+    ...row,
+    apiKey: typeof row.authConfig?.apiKey === 'string' ? row.authConfig.apiKey : '',
+  }
   dialogVisible.value = true
 }
 
-/**
- * 删除
- */
 const handleDelete = async (row: Provider) => {
   const confirmed = await confirmDelete(row.id)
   if (confirmed) {
@@ -400,18 +341,32 @@ const handleDelete = async (row: Provider) => {
   }
 }
 
-/**
- * 提交表单
- */
-const handleSubmit = async (data: any) => {
+const handleTestConnection = async (row: Provider) => {
   try {
+    const result = await testConnection(row.id)
+    if (result.success) {
+      ElMessage.success(`连通性测试成功，延迟 ${result.latencyMs ?? '-'}ms，模型数 ${result.modelCount ?? 0}`)
+      tableRef.value?.refresh()
+      return
+    }
+    ElMessage.error(result.errorMessage || '连通性测试失败')
+  } catch (error) {
+    ElMessage.error('连通性测试失败')
+  }
+}
+
+const handleSubmit = async (data: ProviderFormData) => {
+  try {
+    const payload = buildProviderPayload(data)
     if (editingData.value) {
-      // 编辑
-      await updateProvider(editingData.value.id, data)
+      if (editingData.value.id == null) {
+        notifyError('提供商ID不能为空')
+        return
+      }
+      await updateProvider({ ...payload, id: editingData.value.id } as UpdateProviderRequest)
       notifySuccess('更新成功')
     } else {
-      // 新增
-      await createProvider(data)
+      await createProvider(payload)
       notifySuccess('创建成功')
     }
 
@@ -465,6 +420,20 @@ const handleSubmit = async (data: any) => {
   background-color: transparent !important;
 }
 
+.health-latency {
+  margin-left: 8px;
+  color: var(--color-text-secondary);
+}
+
+.status-toggle {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.status-toggle .el-button {
+  min-width: 72px;
+}
+
 /* 操作按钮容器 */
 .action-buttons {
   display: inline-flex;
@@ -481,6 +450,14 @@ const handleSubmit = async (data: any) => {
   min-height: auto;
   height: auto;
   line-height: 1;
+}
+
+.action-buttons .btn-test {
+  color: var(--color-success-600) !important;
+}
+
+.action-buttons .btn-test:hover {
+  color: var(--color-success-700) !important;
 }
 
 /* 编辑按钮 - 蓝色 */

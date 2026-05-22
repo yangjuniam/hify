@@ -1,7 +1,6 @@
 package com.hify.provider.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -16,7 +15,6 @@ public class UpdateProviderRequest {
     /**
      * ID
      */
-    @NotNull(message = "提供商ID不能为空")
     private Long id;
 
     /**

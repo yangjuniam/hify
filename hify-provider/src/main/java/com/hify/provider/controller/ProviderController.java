@@ -73,8 +73,9 @@ public class ProviderController {
      * @param request 更新请求
      * @return 提供商信息
      */
-    @PutMapping
-    public Result<Provider> updateProvider(@Valid @RequestBody UpdateProviderRequest request) {
+    @PutMapping("/{id}")
+    public Result<Provider> updateProvider(@PathVariable Long id, @Valid @RequestBody UpdateProviderRequest request) {
+        request.setId(id);
         Provider provider = providerService.updateProvider(request);
         return Result.success(provider);
     }

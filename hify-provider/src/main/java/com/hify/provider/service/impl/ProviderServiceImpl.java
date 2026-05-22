@@ -29,7 +29,6 @@ import org.springframework.util.StopWatch;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -78,24 +77,7 @@ public class ProviderServiceImpl implements ProviderService {
         if (provider == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "提供商不存在");
         }
-
-        ProviderDetailVO vo = new ProviderDetailVO();
-        BeanUtils.copyProperties(provider, vo);
-
-        Map<String, Object> maskedAuthConfig = maskAuthConfig(provider.getAuthConfig());
-        vo.setAuthConfig(maskedAuthConfig);
-
-        LambdaQueryWrapper<ModelConfig> modelWrapper = new LambdaQueryWrapper<>();
-        modelWrapper.eq(ModelConfig::getProviderId, id);
-        List<ModelConfig> modelConfigs = modelConfigMapper.selectList(modelWrapper);
-        vo.setModelConfigs(modelConfigs);
-
-        LambdaQueryWrapper<ProviderHealth> healthWrapper = new LambdaQueryWrapper<>();
-        healthWrapper.eq(ProviderHealth::getProviderId, id);
-        ProviderHealth health = providerHealthMapper.selectOne(healthWrapper);
-        vo.setHealth(health);
-
-        return vo;
+        return buildProviderDetail(provider);
     }
 
     @Override
@@ -106,7 +88,12 @@ public class ProviderServiceImpl implements ProviderService {
             throw new BizException(ErrorCode.NOT_FOUND, "提供商不存在");
         }
 
-        BeanUtils.copyProperties(request, provider);
+        provider.setName(request.getName());
+        provider.setType(request.getType());
+        provider.setBaseUrl(request.getBaseUrl());
+        provider.setAuthConfig(request.getAuthConfig());
+        provider.setDescription(request.getDescription());
+        provider.setEnabled(request.getEnabled());
         providerMapper.updateById(provider);
         return provider;
     }
@@ -255,6 +242,29 @@ public class ProviderServiceImpl implements ProviderService {
             .success(true)
             .modelCount(modelCount)
             .build();
+    }
+
+    private ProviderDetailVO buildProviderDetail(Provider provider) {
+        ProviderDetailVO vo = new ProviderDetailVO();
+        BeanUtils.copyProperties(provider, vo);
+        vo.setAuthConfig(maskAuthConfig(provider.getAuthConfig()));
+
+        LambdaQueryWrapper<ModelConfig> modelWrapper = new LambdaQueryWrapper<>();
+        modelWrapper.eq(ModelConfig::getProviderId, provider.getId());
+        vo.setModelConfigs(modelConfigMapper.selectList(modelWrapper));
+
+        LambdaQueryWrapper<ProviderHealth> healthWrapper = new LambdaQueryWrapper<>();
+        healthWrapper.eq(ProviderHealth::getProviderId, provider.getId());
+        ProviderHealth health = providerHealthMapper.selectOne(healthWrapper);
+        if (health == null) {
+            health = new ProviderHealth();
+            health.setProviderId(provider.getId());
+            health.setStatus("UNKNOWN");
+            health.setFailCount(0);
+        }
+        vo.setHealth(health);
+
+        return vo;
     }
 
     private String getApiKey(Provider provider) {
