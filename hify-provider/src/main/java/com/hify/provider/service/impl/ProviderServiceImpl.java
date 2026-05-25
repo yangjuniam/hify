@@ -244,6 +244,17 @@ public class ProviderServiceImpl implements ProviderService {
             .build();
     }
 
+    @Override
+    public boolean isModelConfigAvailable(Long modelConfigId) {
+        ModelConfig modelConfig = modelConfigMapper.selectById(modelConfigId);
+        if (modelConfig == null || !Integer.valueOf(1).equals(modelConfig.getEnabled())) {
+            return false;
+        }
+
+        Provider provider = providerMapper.selectById(modelConfig.getProviderId());
+        return provider != null && Integer.valueOf(1).equals(provider.getEnabled());
+    }
+
     private ProviderDetailVO buildProviderDetail(Provider provider) {
         ProviderDetailVO vo = new ProviderDetailVO();
         BeanUtils.copyProperties(provider, vo);

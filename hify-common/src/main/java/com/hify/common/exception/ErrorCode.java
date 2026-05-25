@@ -24,6 +24,10 @@ public enum ErrorCode {
 
     OPERATION_FAILED(1060, "操作失败"),
     OPERATION_NOT_ALLOWED(1061, "不允许的操作"),
+
+    AGENT_NOT_FOUND(3001, "Agent 不存在"),
+    AGENT_NAME_EXISTS(3002, "Agent 名称已存在"),
+    AGENT_MODEL_CONFIG_INVALID(3003, "模型配置不可用"),
     ;
 
     private final int code;

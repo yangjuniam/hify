@@ -67,4 +67,6 @@ public interface ProviderService {
      * @return 测试结果
      */
     ConnectionTestResult testConnection(Provider provider);
+
+    boolean isModelConfigAvailable(Long modelConfigId);
 }
